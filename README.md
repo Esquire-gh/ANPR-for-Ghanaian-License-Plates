@@ -4,6 +4,6 @@ Software that can detect a Ghanaian number plate in any image
     1.Python
     2. Opencv
     3. Tesseract
-    4. TensorFlow
+    4. Scipy
     
     
