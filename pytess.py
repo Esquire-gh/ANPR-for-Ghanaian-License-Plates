@@ -13,7 +13,7 @@ except ImportError:
     IMAGE PREPROCESSING
 '''
 # reading the image
-First_Image = cv2.imread('test samples/1.jpg')
+First_Image = cv2.imread('test samples/4.jpg')
 
 #converting image to greyscale 
 grey_image = cv2.cvtColor(First_Image, cv2.COLOR_BGR2GRAY)
@@ -249,7 +249,10 @@ Iopen = bwareaopen(Iclear, 120)
     CHARACTER RECOGNITION
     using the tesseract ocr to detect the plate text out of the prepared image
 '''
-
+cv2.imwrite('chars.jpg', Iopen)
+img_with_chars = PIL.Image.open('chars.jpg')
+text = pytesseract.image_to_string(img_with_chars)
+print('Number Plate: {}'.format(text))
 
 
 #displaying various forms of images
