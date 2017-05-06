@@ -1,8 +1,12 @@
 import numpy as np
 import pytesseract
-from matplotlib import pyplot as plt
 import cv2
 import scipy.fftpack
+
+import io
+import os
+
+from google.cloud import vision
 
 try:
 	import Image
@@ -40,10 +44,10 @@ sobel_no_blend = cv2.add(abs_grad_x, abs_grad_y)
 
 
 #finding image graidents for edge detection
-#edge_image = cv2.Canny(blur_image, 250, 100)
+edge_image = cv2.Canny(blur_image, 250, 100)
 
 #using otsu's agorithm to perform binarization
-retVal,thresh_image = cv2.threshold(sobel_no_blend, 128, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+retVal,thresh_image = cv2.threshold(edge_image, 128, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
 
 '''
     PLATE LOCALIZATION
@@ -112,8 +116,12 @@ print("Strong_plates: {}".format(len(strong_plates)))
 print("Fuzzy_plates: {}".format(len(fuzzy_plates)))
 
 
+for i in range(0, len(strong_plates)):
+    cv2.imshow(str(i), strong_plates[i])
+
 # Strong and Fuzzy plate analysis to get the best candidate
-for plate in strong_plates:
+for i in range(0, len(strong_plates)):
+    plate = strong_plates[i]
     #plate_threshold_image = cv2.adaptiveThreshold(plate, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV,11,2)
     p_h, p_w = plate.shape
     
@@ -123,7 +131,7 @@ for plate in strong_plates:
     else:
         plate_to_save = plate
     
-    cv2.imwrite('extracted_plate.jpg', plate_to_save)
+    cv2.imwrite('saves/extractedplate' + str(i) + '.jpg', plate_to_save)
 
 '''
     PLATE SEGMENTATION
@@ -135,8 +143,7 @@ def imclearborder(imgBW, radius):
 
     # Given a black and white image, first find all of its contours
     imgBWcopy = imgBW.copy()
-    contours,hierarchy = cv2.findContours(imgBWcopy.copy(), cv2.RETR_LIST, 
-        cv2.CHAIN_APPROX_SIMPLE)
+    contours,hierarchy = cv2.findContours(imgBWcopy.copy(), cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
 
     # Get dimensions of image
     imgRows = imgBW.shape[0]
@@ -183,10 +190,10 @@ def bwareaopen(imgBW, areaPixels):
 
     return imgBWcopy
     
-#### Main program
+#### Main segmentation program
 
 # Read in image
-img = cv2.imread('extracted_plate.jpg', 0)
+img = cv2.imread('saves/extracted_plate.jpg', 0)
 
 # Number of rows and columns
 rows = img.shape[0]
@@ -226,8 +233,8 @@ Ioutlow = scipy.real(scipy.fftpack.ifft2(If.copy() * HlowShift, (M,N)))
 Iouthigh = scipy.real(scipy.fftpack.ifft2(If.copy() * HhighShift, (M,N)))
 
 # Set scaling factors and add
-gamma1 = 0.3
-gamma2 = 1.5
+gamma1 = 0.5
+gamma2 = 2.0
 Iout = gamma1*Ioutlow[0:rows,0:cols] + gamma2*Iouthigh[0:rows,0:cols]
 
 # Anti-log then rescale to [0,1]
@@ -247,26 +254,43 @@ Iopen = bwareaopen(Iclear, 120)
 
 '''
     CHARACTER RECOGNITION
-    using the tesseract ocr to detect the plate text out of the prepared image
 '''
-cv2.imwrite('chars.jpg', Iopen)
-img_with_chars = PIL.Image.open('chars.jpg')
+# using the tesseract OCR
+cv2.imwrite('saves/chars.jpeg', Iopen)
+img_with_chars = PIL.Image.open('saves/chars.jpeg')
 text = pytesseract.image_to_string(img_with_chars)
 print('Number Plate: {}'.format(text))
 
+'''
+# using the Google Cloud Machine Learning Engine for OCR
+vision_client = vision.Client('anpr-166523')
 
+with io.open('saves/chars.jpeg', 'rb') as image_file:
+    content = image_file.read()
+
+image = vision_client.image(content=content)
+
+texts = image.detect_text()
+print("USING THE ML ENGINE")
+print('Plate:')
+
+for text in texts:
+    print('\n"{}"'.format(text.description))
+'''
+
+'''
+    IMAGES DISPLAY
+'''
 #displaying various forms of images
 cv2.imshow('grey Image', grey_image)
 cv2.imshow('blur Image', blur_image)
 cv2.imshow('sobel', sobel_no_blend)
 cv2.imshow('thresh_image', thresh_image)
 cv2.imshow('original', First_Image)
-
-
 # Show all plate candidate series
-cv2.imshow('Original Image', img)
-cv2.imshow('Homomorphic Filtered Result', Ihmf2)
-cv2.imshow('Thresholded Result', Ithresh)
+#cv2.imshow('Original Image', img)
+#cv2.imshow('Homomorphic Filtered Result', Ihmf2)
+#cv2.imshow('Thresholded Result', Ithresh)
 cv2.imshow('Opened Result', Iopen)
 
 
