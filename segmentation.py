@@ -66,13 +66,6 @@ def plate_segmentation(img):
     rows = img.shape[0]
     cols = img.shape[1]
 
-    # Remove some columns from the beginning and end
-    #img = img[:, 59:cols-20]
-
-    # Number of rows and columns
-    rows = img.shape[0]
-    cols = img.shape[1]
-
     # Convert image to 0 to 1, then do log(1 + I)
     imgLog = np.log1p(np.array(img, dtype="float") / 255)
 
